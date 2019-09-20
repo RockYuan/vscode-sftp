@@ -1,73 +1,60 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as debounce from 'lodash.debounce';
-import sftpBarItem from '../ui/sftpBarItem';
-import * as output from '../ui/output';
-import { isValidFile } from '../helper/fileType';
-import reportError from '../helper/reportError';
-import fileDepth from '../helper/fileDepth';
-import { simplifyPath } from '../helper/paths';
-import { upload, removeRemote } from '../actions';
-import { getConfig } from './config';
 import logger from '../logger';
+import { isValidFile, fileDepth } from '../helper';
+import { upload, removeRemote } from '../fileHandlers';
+import { WatcherService, TransferDirection } from '../core';
+import app from '../app';
+import StatusBarItem from '../ui/statusBarItem';
+import { getRunningTransformTasks } from './serviceManager';
 
 const watchers: {
   [x: string]: vscode.FileSystemWatcher;
 } = {};
 
-const uploadQueue = new Set<string>();
-const deleteQueue = new Set<string>();
+const uploadQueue = new Set<vscode.Uri>();
+const deleteQueue = new Set<vscode.Uri>();
 
 // less than 550 will not work
 const ACTION_INTEVAL = 550;
 
-function fileError(event, file, showErrorWindow = true) {
-  return error => {
-    logger.error(`${event} ${file}`, '\n', error.stack);
-    if (showErrorWindow) {
-      output.show();
-    }
-  };
-}
-
 function doUpload() {
-  const files = Array.from(uploadQueue).sort((a, b) => fileDepth(b) - fileDepth(a));
+  const files = Array.from(uploadQueue).sort((a, b) => fileDepth(b.fsPath) - fileDepth(a.fsPath));
   uploadQueue.clear();
-  files.forEach(file => {
-    let config;
-    try {
-      config = getConfig(file);
-    } catch (error) {
-      reportError(error);
+
+  const currentDownloadTasks = getRunningTransformTasks().filter(
+    task => task.transferType === TransferDirection.REMOTE_TO_LOCAL
+  );
+
+  files.forEach(async uri => {
+    // current target is still in downloading, so don't upload it.
+    if (currentDownloadTasks.find(task => task.localFsPath === uri.fsPath)) {
       return;
     }
 
-    upload(file, config).then(() => {
-      logger.info('[watcher]', `upload ${file}`);
-      sftpBarItem.showMsg(`upload ${path.basename(file)}`, simplifyPath(file), 2 * 1000);
-    }, fileError('upload', file));
+    const fspath = uri.fsPath;
+    logger.info(`[watcher/updated] ${fspath}`);
+    try {
+      await upload(uri);
+    } catch (error) {
+      logger.error(error, `upload ${fspath}`);
+      app.sftpBarItem.updateStatus(StatusBarItem.Status.error);
+    }
   });
 }
 
 function doDelete() {
-  const files = Array.from(deleteQueue).sort((a, b) => fileDepth(b) - fileDepth(a));
+  const files = Array.from(deleteQueue).sort((a, b) => fileDepth(b.fsPath) - fileDepth(a.fsPath));
   deleteQueue.clear();
-  let config;
-  files.forEach(file => {
+  files.forEach(async uri => {
+    const fspath = uri.fsPath;
+    logger.info(`[watcher/removed] ${fspath}`);
     try {
-      config = getConfig(file);
+      await removeRemote(uri);
     } catch (error) {
-      reportError(error);
-      return;
+      logger.error(error, `remove ${fspath}`);
+      app.sftpBarItem.updateStatus(StatusBarItem.Status.error);
     }
-
-    removeRemote(file, {
-      ...config,
-      // skipDir: true,
-    }).then(() => {
-      logger.info('[watcher]', `delete ${file}`);
-      sftpBarItem.showMsg(`delete ${path.basename(file)}`, simplifyPath(file), 2 * 1000);
-    }, fileError('delete', config.remotePath, false));
   });
 }
 
@@ -79,87 +66,74 @@ function uploadHandler(uri: vscode.Uri) {
     return;
   }
 
-  uploadQueue.add(uri.fsPath);
+  uploadQueue.add(uri);
   debouncedUpload();
 }
 
-function getWatcherByConfig(config) {
-  return watchers[config.context];
+function addWatcher(id, watcher) {
+  watchers[id] = watcher;
 }
 
-function removeWatcherByConfig(config) {
-  return delete watchers[config.context];
+function getWatcher(id) {
+  return watchers[id];
 }
 
-function getWatchs() {
-  return Object.keys(watchers).map(key => watchers[key]);
-}
-
-function setUpWatcher(config) {
-  const watchConfig = config.watcher !== undefined ? config.watcher : {};
-
-  let watcher = getWatcherByConfig(config);
+function createWatcher(
+  watcherBase: string,
+  watcherConfig: { files: false | string; autoUpload: boolean; autoDelete: boolean }
+) {
+  let watcher = getWatcher(watcherBase);
   if (watcher) {
     // clear old watcher
     watcher.dispose();
   }
 
-  const shouldAddListenser = watchConfig.autoUpload || watchConfig.autoDelete;
+  if (!watcherConfig) {
+    return;
+  }
+
+  const shouldAddListenser = watcherConfig.autoUpload || watcherConfig.autoDelete;
   // tslint:disable-next-line triple-equals
-  if (watchConfig.files == false || !shouldAddListenser) {
+  if (watcherConfig.files == false || !shouldAddListenser) {
     return;
   }
 
   watcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(config.context, watchConfig.files),
+    new vscode.RelativePattern(watcherBase, watcherConfig.files),
     false,
     false,
     false
   );
-  watchers[config.context] = watcher;
+  addWatcher(watcherBase, watcher);
 
-  if (watchConfig.autoUpload) {
+  if (watcherConfig.autoUpload) {
     watcher.onDidCreate(uploadHandler);
     watcher.onDidChange(uploadHandler);
   }
 
-  if (watchConfig.autoDelete) {
+  if (watcherConfig.autoDelete) {
     watcher.onDidDelete(uri => {
       if (!isValidFile(uri)) {
         return;
       }
 
-      deleteQueue.add(uri.fsPath);
+      deleteQueue.add(uri);
       debouncedDelete();
     });
   }
 }
 
-export function disableWatcher(config) {
-  const watcher = getWatcherByConfig(config);
+function removeWatcher(watcherBase: string) {
+  const watcher = getWatcher(watcherBase);
   if (watcher) {
     watcher.dispose();
-    removeWatcherByConfig(config);
+    delete watchers[watcherBase];
   }
 }
 
-export function enableWatcher(config) {
-  if (getWatcherByConfig(config) !== undefined) {
-    return;
-  }
+const watcherService: WatcherService = {
+  create: createWatcher,
+  dispose: removeWatcher,
+};
 
-  // delay setup watcher to avoid download event
-  setTimeout(() => {
-    setUpWatcher(config);
-  }, 1000 * 3);
-}
-
-export function watchFiles(config) {
-  const configs = [].concat(config);
-  configs.forEach(setUpWatcher);
-}
-
-export function clearAllWatcher() {
-  const disposable = vscode.Disposable.from(...getWatchs());
-  disposable.dispose();
-}
+export default watcherService;

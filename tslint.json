@@ -1,12 +1,15 @@
 {
   "extends": "tslint:recommended",
   "rules": {
+    "object-literal-key-quotes": false,
+    "no-angle-bracket-type-assertion": false,
+    "max-classes-per-file": false,
+    "member-ordering": false,
     "variable-name": [true, "ban-keywords", "check-format", "allow-leading-underscore"],
     "array-type": false,
     "interface-name": false,
     "no-unused-expression": true,
     "no-duplicate-variable": true,
-    "no-unused-variable": true,
     "curly": [true, "ignore-same-line"],
     "class-name": true,
     "semicolon": true,
@@ -32,6 +35,7 @@
         }
       }
     ],
-    "member-access": [true, "no-public"]
+    "member-access": [true, "no-public"],
+    "unified-signatures": false
   }
 }

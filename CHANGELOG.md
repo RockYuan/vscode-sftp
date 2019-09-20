@@ -1,3 +1,154 @@
+## 1.12.3 - 2019-04-27
+  * Minor improvements.
+  * Bug fix.
+
+## 1.12.1 - 2019-03-28
+  * Fix [#510](https://github.com/liximomo/vscode-sftp/issues/510).
+
+## 1.12.0 - 2019-03-21
+  * new option [sshCustomParams](https://github.com/liximomo/vscode-sftp/wiki/SFTP-only-Config#sshcustomparams).
+
+## 1.11.0 - 2019-03-15
+  * Save before upload.
+  * Fix [#490](https://github.com/liximomo/vscode-sftp/issues/490).
+
+## 1.9.4 - 2019-02-26
+  * Fix sshConfig file not work.
+  * Open SSH in Terminal can enter to remote path.
+
+## 1.9.3 - 2019-01-30
+  * New icon for RemoteExplorer. Thanks [niccolomineo](https://github.com/niccolomineo) and [jonbp](https://github.com/jonbp).
+  * Change `port` to number in the generated config.
+   
+## 1.9.2 - 2019-01-22
+  * Fix [#388](https://github.com/liximomo/vscode-sftp/issues/388)
+  * Fix [#456](https://github.com/liximomo/vscode-sftp/issues/456)
+  * Fix [#459](https://github.com/liximomo/vscode-sftp/issues/459)
+
+## 1.9.0 - 2019-01-08
+  * Control files and folders to show or hide in Remote Explorer by `remoteExplorer.filesExclude`. [#410](https://github.com/liximomo/vscode-sftp/issues/410)
+  * Suport new OpenSSH key format. [#391](https://github.com/liximomo/vscode-sftp/issues/391)
+  * Improve performance.
+
+## 1.8.4 - 2018-12-16
+  * Fix ignore not work when use profile. [#428](https://github.com/liximomo/vscode-sftp/issues/428)
+
+## 1.8.3 - 2018-12-14
+  * Upgrade VSCode engine version.
+
+## 1.8.2 - 2018-12-13
+  * Add **Collapse All** action to RemoteExplorer.
+
+## 1.8.0 - 2018-12-06
+  * New command [Upload Changed Files](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-upload-changed-files).
+  * Fix bugs.
+
+## 1.7.6 - 2018-11-22
+  * Reduce *80%* startup time.
+  * Fix [#396](https://github.com/liximomo/vscode-sftp/issues/396)
+
+## 1.7.5 - 2018-11-15
+  * Fix [#394](https://github.com/liximomo/vscode-sftp/issues/394)
+
+## 1.7.4 - 2018-11-09
+  * Fix [#362](https://github.com/liximomo/vscode-sftp/issues/362)
+  * Don't upload the file when it's in downloading. [#390](https://github.com/liximomo/vscode-sftp/issues/390)
+
+## 1.7.3 - 2018-11-03
+  * New config [limitOpenFilesOnRemote](https://github.com/liximomo/vscode-sftp/wiki/Config#limitopenfilesonremote).
+  * Show `upload file` context menu in SCM.
+
+## 1.7.2 - 2018-10-29
+  * New command [Open SSH in Terminal](https://github.com/liximomo/vscode-sftp/wiki/Commands#open-ssh-in-terminal).
+
+## 1.7.1 - 2018-10-25
+  * New setting [downloadwhenopeninremoteexplorer](https://github.com/liximomo/vscode-sftp/wiki/Setting#downloadwhenopeninremoteexplorer).
+  * fix some bugs.
+
+## 1.7.0 - 2018-10-19
+### New Features
+  * New command [Upload Active Folder](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-upload-active-folder).
+  * New command [Download Active Folder](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-download-active-folder).
+  * New command [List Active Folder](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-list-active-folder).
+  * New command [Cancel All Transfers](https://github.com/liximomo/vscode-sftp/wiki/Commands#cancel-all-transfers).
+  * New config [remotetimeoffsetinhours](https://github.com/liximomo/vscode-sftp/wiki/Config#remotetimeoffsetinhours).
+
+## 1.6.0 - 2018-10-12
+### New Features
+  * New command [Sync Local -> Remote](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-sync-local---remote).
+  * New command [Sync Remote -> Local](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-sync-remote---local).
+  * New command [Sync Both Directions](https://github.com/liximomo/vscode-sftp/wiki/Commands#sftp-sync-both-directions).
+  * New config [syncOption](https://github.com/liximomo/vscode-sftp/wiki/Config#syncoption) for `Sync` command.
+
+### Breaking Changes
+  * Remove Command `SFTP: Sync To Remote`.
+  * Remove Command `SFTP: Sync To Local`.
+  * Remove config option `syncModel`.
+
+## 1.5.13 - 2018-10-08
+* Fix [#344](https://github.com/liximomo/vscode-sftp/issues/344)
+
+## 1.5.12 - 2018-10-07
+* New command `Diff Active File with Remote`.
+* Command `Set Profile` can receive an argument from keybindings.
+
+  ```json
+  {
+    "key": "ctrl+shift+cmd+d",
+    "command": "sftp.setProfile",
+    "args": "dev"
+  }
+  ```
+
+## 1.5.10 - 2018-09-28
+* Fix [#332](https://github.com/liximomo/vscode-sftp/issues/332)
+
+## 1.5.9 - 2018-09-27
+* Fix [#330](https://github.com/liximomo/vscode-sftp/issues/330)
+
+## 1.5.8 - 2018-09-25
+* Show name in the remote explorer. [#315](https://github.com/liximomo/vscode-sftp/issues/315)
+* Fix [#308](https://github.com/liximomo/vscode-sftp/issues/308)
+
+## 1.5.0 - 2018-09-13
+### New Features
+  * new [alt commands](https://github.com/liximomo/vscode-sftp#alt-commands) `Force Download` and `Force Upload`. This allow you to download/upload files but disregard ignore rules.
+
+### Breaking Changes
+  * Rename command `sftp.trans.remote(SFTP: Upload)` to `sftp.upload.activeFile` and command `sftp.trans.local(SFTP: Download)` to `sftp.download.activeFile`. Please update your keybinding if you've used one of these commands. 
+
+### Deprecated
+  * Commands `SFTP: List` and `SFTP: List All` will be removed in favor of `Remote Explorer` in next release.
+
+## 1.4.1 - 2018-09-03
+### Feature
+  * [Config in User Setting](https://github.com/liximomo/vscode-sftp#config-in-user-setting) config your remote in User Setting
+
+### Fix
+  * fix sshConfig file not overwriting default config. ([#305](https://github.com/liximomo/vscode-sftp/issues/305))
+
+## 1.4.0 - 2018-08-27
+### Feature
+  * [Connection Hopping](https://github.com/liximomo/vscode-sftp#connection-hopping) allow you to connection to a target server through a proxy with ssh protocol
+
+## 1.3.9 - 2018-08-14
+* Fix [#286](https://github.com/liximomo/vscode-sftp/issues/286)
+* Fix [#287](https://github.com/liximomo/vscode-sftp/issues/287)
+
+## 1.3.8 - 2018-08-13
+* Fix [#285](https://github.com/liximomo/vscode-sftp/issues/285)
+ 
+## 1.3.7 - 2018-08-10
+* Fix bug in remoteExplorer.refresh
+
+## 1.3.0 - 2018-08-02
+### New Features
+  * [Remote Explorer](https://github.com/liximomo/vscode-sftp#remote-explorer).
+
+## 1.2.7 - 2018-07-27
+### New Features
+  * `ignoreFile` [option](https://github.com/liximomo/vscode-sftp/wiki/Config#ignorefile).
+
 ## 1.2.3 - 2018-06-19
 ### New Features
   * [Swtichable Profiles](https://github.com/liximomo/vscode-sftp/#profiles).

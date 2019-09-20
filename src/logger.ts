@@ -1,8 +1,10 @@
 import * as output from './ui/output';
-import { getConfig } from './host';
+import { getExtensionSetting } from './modules/ext';
 
-const config = getConfig();
-const printDebugLog = config.printDebugLog;
+const extSetting = getExtensionSetting();
+const debug = extSetting.debug || extSetting.printDebugLog;
+
+const paddingTime = time => ('00' + time).slice(-2);
 
 export interface Logger {
   trace(message: string, ...args: any[]): void;
@@ -14,32 +16,42 @@ export interface Logger {
 }
 
 class VSCodeLogger implements Logger {
+  log(message: string, ...args: any[]) {
+    const now = new Date();
+    const month = paddingTime(now.getMonth() + 1);
+    const date = paddingTime(now.getDate());
+    const h = paddingTime(now.getHours());
+    const m = paddingTime(now.getMinutes());
+    const s = paddingTime(now.getSeconds());
+    output.print(`[${month}-${date} ${h}:${m}:${s}]`, message, ...args);
+  }
+
   trace(message: string, ...args: any[]) {
-    if (printDebugLog) {
-      output.print('[trace]', message, ...args);
+    if (debug) {
+      this.log('[trace]', message, ...args);
     }
   }
 
   debug(message: string, ...args: any[]) {
-    if (printDebugLog) {
-      output.print('[debug]', message, ...args);
+    if (debug) {
+      this.log('[debug]', message, ...args);
     }
   }
 
   info(message: string, ...args: any[]) {
-    output.print('[info]', message, ...args);
+    this.log('[info]', message, ...args);
   }
 
   warn(message: string, ...args: any[]) {
-    output.print('[warn]', message, ...args);
+    this.log('[warn]', message, ...args);
   }
 
   error(message: string | Error, ...args: any[]) {
-    output.print('[error]', message, ...args);
+    this.log('[error]', message, ...args);
   }
 
   critical(message: string | Error, ...args: any[]) {
-    output.print('[critical]', message, ...args);
+    this.log('[critical]', message, ...args);
   }
 }
 

@@ -1,61 +1,82 @@
 import * as vscode from 'vscode';
 import logger from '../logger';
-import sftpBarItem from '../ui/sftpBarItem';
+import app from '../app';
+import StatusBarItem from '../ui/statusBarItem';
 import { onDidOpenTextDocument, onDidSaveTextDocument, showConfirmMessage } from '../host';
-import { getConfig, loadConfig } from './config';
-import { upload } from '../actions';
-import { watchFiles } from './fileWatcher';
-import { endAllRemote } from './remoteFs';
-import { download } from '../actions';
-import reportError from '../helper/reportError';
-import { isValidFile, isConfigFile } from '../helper/fileType';
+import { readConfigsFromFile } from './config';
+import {
+  createFileService,
+  getFileService,
+  findAllFileService,
+  disposeFileService,
+} from './serviceManager';
+import { reportError, isValidFile, isConfigFile, isInWorksapce } from '../helper';
+import { downloadFile, uploadFile } from '../fileHandlers';
 
 let workspaceWatcher: vscode.Disposable;
 
-function handleConfigSave(uri: vscode.Uri) {
-  loadConfig(uri.fsPath).then(config => {
-    // close connected remote, cause the remote may changed
-    endAllRemote();
-    watchFiles(config);
-  }, reportError);
-}
-
-async function handleFileSave(uri) {
-  const activityPath = uri.fsPath;
-  let config;
-  try {
-    config = getConfig(activityPath);
-  } catch (error) {
-    // ignore config error
+async function handleConfigSave(uri: vscode.Uri) {
+  const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+  if (!workspaceFolder) {
     return;
   }
 
+  const workspacePath = workspaceFolder.uri.fsPath;
+
+  // dispose old service
+  findAllFileService(service => service.workspace === workspacePath).forEach(disposeFileService);
+
+  // create new service
+  try {
+    const configs = await readConfigsFromFile(uri.fsPath);
+    configs.forEach(config => createFileService(config, workspacePath));
+  } catch (error) {
+    reportError(error);
+  } finally {
+    app.remoteExplorer.refresh();
+  }
+}
+
+async function handleFileSave(uri: vscode.Uri) {
+  const fileService = getFileService(uri);
+  if (!fileService) {
+    return;
+  }
+
+  const config = fileService.getConfig();
   if (config.uploadOnSave) {
-    await upload(activityPath, config).catch(reportError);
-    logger.info(`[file-save] upload ${activityPath}`);
-    sftpBarItem.showMsg('upload done', 2 * 1000);
+    const fspath = uri.fsPath;
+    logger.info(`[file-save] ${fspath}`);
+    try {
+      await uploadFile(uri);
+    } catch (error) {
+      logger.error(error, `download ${fspath}`);
+      app.sftpBarItem.updateStatus(StatusBarItem.Status.error);
+    }
   }
 }
 
-async function downloadOnOpen(uri) {
-  const activityPath = uri.fsPath;
-  let config;
-  try {
-    config = getConfig(activityPath);
-  } catch (error) {
-    // ignore config error
+async function downloadOnOpen(uri: vscode.Uri) {
+  const fileService = getFileService(uri);
+  if (!fileService) {
     return;
   }
 
+  const config = fileService.getConfig();
   if (config.downloadOnOpen) {
     if (config.downloadOnOpen === 'confirm') {
       const isConfirm = await showConfirmMessage('Do you want SFTP to download this file?');
       if (!isConfirm) return;
     }
 
-    await download(activityPath, config).catch(reportError);
-    logger.info(`[file-open] download ${activityPath}`);
-    sftpBarItem.showMsg('download done', 2 * 1000);
+    const fspath = uri.fsPath;
+    logger.info(`[file-open] ${fspath}`);
+    try {
+      await downloadFile(uri);
+    } catch (error) {
+      logger.error(error, `download ${fspath}`);
+      app.sftpBarItem.updateStatus(StatusBarItem.Status.error);
+    }
   }
 }
 
@@ -72,11 +93,15 @@ function watchWorkspace({
 
   workspaceWatcher = onDidSaveTextDocument((doc: vscode.TextDocument) => {
     const uri = doc.uri;
-    if (!isValidFile(uri)) {
+    if (!isValidFile(uri) || !isInWorksapce(uri.fsPath)) {
       return;
     }
 
-    // let configWatcher do this
+    // remove staled cache
+    if (app.fsCache.has(uri.fsPath)) {
+      app.fsCache.del(uri.fsPath);
+    }
+
     if (isConfigFile(uri)) {
       onDidSaveSftpConfig(uri);
       return;
@@ -88,7 +113,7 @@ function watchWorkspace({
 
 function init() {
   onDidOpenTextDocument((doc: vscode.TextDocument) => {
-    if (!isValidFile(doc.uri)) {
+    if (!isValidFile(doc.uri) || !isInWorksapce(doc.uri.fsPath)) {
       return;
     }
 

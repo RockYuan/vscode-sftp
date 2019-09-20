@@ -1,8 +1,23 @@
 import * as vscode from 'vscode';
 import { EXTENSION_NAME } from './constants';
 
-export function getConfig() {
-  return vscode.workspace.getConfiguration(EXTENSION_NAME);
+export function getOpenTextDocuments(): vscode.TextDocument[] {
+  return vscode.workspace.textDocuments;
+}
+
+export function getUserSetting(section: string, resource?: vscode.Uri | null | undefined) {
+  return vscode.workspace.getConfiguration(section, resource);
+}
+
+export function executeCommand(command: string, ...rest: any[]): Thenable<any> {
+  return vscode.commands.executeCommand(command, ...rest);
+}
+
+export function onWillSaveTextDocument(
+  listener: (e: vscode.TextDocumentWillSaveEvent) => any,
+  thisArgs?: any
+) {
+  return vscode.workspace.onWillSaveTextDocument(listener, thisArgs);
 }
 
 export function onDidSaveTextDocument(listener: (e: vscode.TextDocument) => any, thisArgs?: any) {
@@ -26,39 +41,44 @@ export function getWorkspaceFolders() {
 }
 
 export function refreshExplorer() {
-  return vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+  return executeCommand('workbench.files.action.refreshFilesExplorer');
 }
 
 export function focusOpenEditors() {
-  return vscode.commands.executeCommand('workbench.files.action.focusOpenEditorsView');
+  return executeCommand('workbench.files.action.focusOpenEditorsView');
 }
 
-export function showTextDocument(filepath: string) {
-  return vscode.window.showTextDocument(vscode.Uri.file(filepath));
+export function showTextDocument(uri: vscode.Uri, option?: vscode.TextDocumentShowOptions) {
+  return vscode.window.showTextDocument(uri, option);
 }
 
 export function diffFiles(leftFsPath, rightFsPath, title, option?) {
   const leftUri = vscode.Uri.file(leftFsPath);
   const rightUri = vscode.Uri.file(rightFsPath);
 
-  return vscode.commands.executeCommand('vscode.diff', leftUri, rightUri, title, option);
+  return executeCommand('vscode.diff', leftUri, rightUri, title, option);
 }
 
-export function promptForPassword(prompt: string): Promise<string | null> {
+export function promptForPassword(prompt: string): Promise<string | undefined> {
   return vscode.window.showInputBox({
     ignoreFocusOut: true,
     password: true,
     prompt,
-  }) as Promise<string | null>;
+  }) as Promise<string | undefined>;
 }
 
 export function setContextValue(key: string, value: any) {
-  vscode.commands.executeCommand('setContext', EXTENSION_NAME + ':' + key, value);
+  executeCommand('setContext', EXTENSION_NAME + '.' + key, value);
+}
+
+export function showErrorMessage(message: string, ...items: string[]) {
+  return vscode.window.showErrorMessage(message, ...items);
 }
 
 export function showInformationMessage(message: string, ...items: string[]) {
   return vscode.window.showInformationMessage(message, ...items);
 }
+
 export function showWarningMessage(message: string, ...items: string[]) {
   return vscode.window.showWarningMessage(message, ...items);
 }
@@ -82,13 +102,13 @@ export function showOpenDialog(options: vscode.OpenDialogOptions) {
 }
 
 export function openFolder(uri?: vscode.Uri, newWindow?: boolean) {
-  return vscode.commands.executeCommand('vscode.openFolder', uri, newWindow);
+  return executeCommand('vscode.openFolder', uri, newWindow);
 }
 
 export function registerCommand(
   context: vscode.ExtensionContext,
   name: string,
-  callback: (args: any[]) => any,
+  callback: (...args: any[]) => any,
   thisArg?: any
 ) {
   const disposable = vscode.commands.registerCommand(name, callback, thisArg);
